@@ -1,5 +1,6 @@
 #!/bin/bash
 
+### for Debian k8s master setup  
 ### reference url:
 ### https://docs.docker.com/install/linux/docker-ce/debian/
 
@@ -40,6 +41,6 @@ sudo apt-get update
 #    or go to the next step to install a specific version:
 sudo apt-get install docker-ce docker-ce-cli containerd.io
 
-
+# tbd..
 
 
