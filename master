@@ -1,5 +1,8 @@
 #!/bin/bash
 
+### reference url:
+### https://docs.docker.com/install/linux/docker-ce/debian/
+
 #############################################
 ###         SET UP THE REPOSITORY         ###
 #############################################
