@@ -16,10 +16,25 @@
 ##################################################
 
 # 1. Update the apt package index:
+cat << EOF
+##command##
+sudo apt-get update -y
+EOF
+
 #sudo apt-get update
 sudo apt-get update -y
 
 # 2. Install packages to allow apt to use a repository over HTTPS:
+cat << EOF
+##command##
+sudo apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg2 \
+    software-properties-common
+EOF
+
 #sudo apt-get install \
 sudo apt-get install -y \
     apt-transport-https \
@@ -29,11 +44,24 @@ sudo apt-get install -y \
     software-properties-common
     
 # 3. Add Docker’s official GPG key:
+cat << EOF
+##command##
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+EOF
+
 curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
 
 # 4. Use the following command to set up the stable repository. 
 #    To add the nightly or test repository, add the word nightly or test (or both) 
 #    after the word stable in the commands below. Learn about nightly and test channels.
+cat << EOF
+##command##
+sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/debian \
+   $(lsb_release -cs) \
+   stable"
+EOF
+
 sudo add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/debian \
    $(lsb_release -cs) \
@@ -44,11 +72,21 @@ sudo add-apt-repository \
 ##################################################
 
 # 1. Update the apt package index.
+cat << EOF
+##command##
+sudo apt-get update -y
+EOF
+
 #sudo apt-get update
 sudo apt-get update -y
 
 # 2. Install the latest version of Docker Engine - Community and containerd, 
 #    or go to the next step to install a specific version:
+cat << EOF
+##command##
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+EOF
+
 #sudo apt-get install docker-ce docker-ce-cli containerd.io
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
@@ -62,6 +100,18 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 ##################################################
 ### Installing kubeadm, kubelet and kubectl
 ##################################################
+
+cat << EOF
+##command##
+sudo apt-get update -y && sudo apt-get install -y apt-transport-https curl
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+sudo tee /etc/apt/sources.list.d/kubernetes.list <<E0F
+deb https://apt.kubernetes.io/ kubernetes-xenial main
+E0F
+sudo apt-get update -y
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+EOF
 
 #apt-get update && apt-get install -y apt-transport-https curl
 sudo apt-get update -y && sudo apt-get install -y apt-transport-https curl
@@ -124,6 +174,15 @@ sudo apt-mark hold kubelet kubeadm kubectl
 
 # Case. Use flannel
 #kubeadm init --pod-network-cidr=10.244.0.0/16
+
+cat << EOF
+##command##
+kubeadm init --pod-network-cidr=10.244.0.0/16
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+EOF
 
 kubeadm init --pod-network-cidr=10.244.0.0/16
 
