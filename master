@@ -1,7 +1,6 @@
 #!/bin/bash
 DOCKER_VERSION=5:18.09.8~3-0~debian-stretch
 
-##########
 ####################################################################################################
 # for Debian k8s master setup
 ####################################################################################################
@@ -249,7 +248,7 @@ done
 echo -ne '\n'
 
 sudo docker stop token-nginx
-
+sudo docker image rm nginx
 
 echo "finished!"
 
