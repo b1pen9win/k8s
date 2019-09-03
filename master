@@ -1,4 +1,5 @@
 #!/bin/bash
+DOCKER_VERSION=5:18.09.0~3-0~debian-stretch
 
 ##########
 ####################################################################################################
@@ -82,14 +83,26 @@ sudo apt-get update -y
 
 # 2. Install the latest version of Docker Engine - Community and containerd, 
 #    or go to the next step to install a specific version:
-cat << EOF
+#cat << EOF
 ##command##
 ## sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-EOF
+#EOF
 
 #sudo apt-get install docker-ce docker-ce-cli containerd.io
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+#sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
+# 3. To install a specific version of Docker Engine - Community, 
+# list the available versions in the repo, then select and install:
+
+echo "########## SPECIFIC DOCKER VERSION ###########"
+echo "Specific Docker Version=$DOCKER_VERSION"
+cat << EOF
+##command##
+## 
+## sudo apt-get install -y docker-ce=$DOCKER_VERSION docker-ce-cli=$DOCKER_VERSION containerd.io
+EOF
+
+sudo apt-get install -y docker-ce=$DOCKER_VERSION docker-ce-cli=$DOCKER_VERSION containerd.io
 
 ##########################################################################################
 ## k8s setup with kubeadm
