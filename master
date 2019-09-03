@@ -209,10 +209,46 @@ mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
+
+##########################################################################################
+## 
+## test
+## 
+##########################################################################################
+
 cat << EOF
-##command##
-## sudo kubeadm token create --print-join-command
-## TBE.....
+###########################################################################
+Please setup worker nodes.
+The master node keep this state for 100 seconds.
+
+  $ docker run --rm -d --name token-nginx
+               --publish 9999:80
+	       --mount type=bind,source=\$PWD,target=/usr/share/nginx/html/
+	       nginx
+
+Then run the following command...
+
+  $ docker stop token-nginx
+
 EOF
 
+sudo kubeadm token create --print-join-command > index.html
+sudo docker run --rm -d --name token-nginx \
+                --publish 9999:80 \
+                --mount type=bind,source=\$PWD,target=/usr/share/nginx/html/ \
+                nginx
+
+for ((i = 1; i <= 10; i++))
+do
+  bar=$bar'##'
+  percent=$((i * 10))
+  echo -ne "$bar ($percent%)\r"
+  sleep 10
+done
+echo -ne '\n'
+
+sudo docker stop token-nginx
+
+
+echo "finished!"
 
