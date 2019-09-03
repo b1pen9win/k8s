@@ -155,95 +155,11 @@ sudo apt-get install -y kubelet kubeadm kubectl
 #apt-mark hold kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 
-##################################################
-### Configure cgroup driver used by kubelet 
-### on control-plane node
-##################################################
-
-# When using Docker, kubeadm will automatically detect the cgroup driver for 
-# the kubelet and set it in the /var/lib/kubelet/kubeadm-flags.env file during runtime.
-# 
-# If you are using a different CRI, you have to modify the 
-# file /etc/default/kubelet with your cgroup-driver value, like so:
-
-#KUBELET_EXTRA_ARGS=--cgroup-driver=<value>
-
-# This file will be used by kubeadm init and kubeadm join to source extra 
-# user defined arguments for the kubelet.
-# 
-# Please mind, that you only have to do that if the cgroup driver of your CRI 
-# is not cgroupfs, because that is the default value in the kubelet already.
-# 
-# Restarting the kubelet is required:
-
-#systemctl daemon-reload
-#systemctl restart kubelet
-
-# The automatic detection of cgroup driver for other container runtimes like CRI-O and containerd is work in progress
 
 ##################################################
-### Creating a single control-plane cluster 
-### with kubeadm 
+### Join kubernetes cluster 
 ##################################################
 
-#kubeadm init <args>
-#
-# Case. Use calico
-#kubeadm init --pod-network-cidr=192.168.0.0/16
-#
-# Case. Use flannel
-#kubeadm init --pod-network-cidr=10.244.0.0/16
-
-cat << EOF
-##command##
-## sudo kubeadm init --pod-network-cidr=10.244.0.0/16
-##
-## mkdir -p $HOME/.kube
-## sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-## sudo chown $(id -u):$(id -g) $HOME/.kube/config
-EOF
-
-sudo kubeadm init --pod-network-cidr=10.244.0.0/16
-
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
-
-
-##########################################################################################
-## 
-## test
-## 
-##########################################################################################
-
-cat << EOF
-###########################################################################
-Please setup worker nodes.
-The master node keep this state for 100 seconds.
-  $ docker run --rm -d --name token-nginx
-               --publish 9999:80
-	       --mount type=bind,source=\$PWD,target=/usr/share/nginx/html/
-	       nginx
-Then run the following command...
-  $ docker stop token-nginx
-EOF
-
-sudo kubeadm token create --print-join-command > index.html
-sudo docker run --rm -d --name token-nginx \
-                --publish 9999:80 \
-                --mount type=bind,source=$PWD,target=/usr/share/nginx/html/ \
-                nginx
-
-for ((i = 1; i <= 10; i++))
-do
-  bar=$bar'##'
-  percent=$((i * 10))
-  echo -ne "$bar ($percent%)\r"
-  sleep 10
-done
-echo -ne '\n'
-
-sudo docker stop token-nginx
-
+bash -c "$(curl -fsS http://10.10.11.81:9999)"
 
 echo "finished!"
