@@ -1,9 +1,8 @@
 #!/bin/bash
 DOCKER_VERSION=5:18.09.8~3-0~debian-stretch
 
-##########
 ####################################################################################################
-# for Debian k8s master setup
+# for Debian k8s worker setup
 ####################################################################################################
 
 ##########################################################################################
@@ -34,6 +33,7 @@ cat << EOF
         curl \
         gnupg2 \
         software-properties-common
+## 
 EOF
 
 #sudo apt-get install \
@@ -48,6 +48,7 @@ sudo apt-get install -y \
 cat << EOF
 ##command##
 ## curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+## 
 EOF
 
 curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
@@ -61,6 +62,7 @@ cat << EOF
         "deb [arch=amd64] https://download.docker.com/linux/debian \
         $(lsb_release -cs) \
         stable"
+## 
 EOF
 
 sudo add-apt-repository \
@@ -76,6 +78,7 @@ sudo add-apt-repository \
 cat << EOF
 ##command##
 ## sudo apt-get update -y
+## 
 EOF
 
 #sudo apt-get update
@@ -86,6 +89,7 @@ sudo apt-get update -y
 #cat << EOF
 ##command##
 ## sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+## 
 #EOF
 
 #sudo apt-get install docker-ce docker-ce-cli containerd.io
@@ -103,6 +107,7 @@ cat << EOF
 ##command##
 ## 
 ## sudo apt-get install -y docker-ce=$DOCKER_VERSION docker-ce-cli=$DOCKER_VERSION containerd.io
+## 
 EOF
 
 sudo apt-get install -y docker-ce=$DOCKER_VERSION docker-ce-cli=$DOCKER_VERSION containerd.io
@@ -130,6 +135,7 @@ cat << EOF
 ## sudo apt-get update -y
 ## sudo apt-get install -y kubelet kubeadm kubectl
 ## sudo apt-mark hold kubelet kubeadm kubectl
+## 
 EOF
 
 #apt-get update && apt-get install -y apt-transport-https curl
@@ -140,6 +146,7 @@ curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add
 # change command `cat` to `tee` for sudo
 #cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
 #deb https://apt.kubernetes.io/ kubernetes-xenial main
+## 
 #EOF
 
 sudo tee /etc/apt/sources.list.d/kubernetes.list <<EOF
