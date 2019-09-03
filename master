@@ -19,6 +19,7 @@ DOCKER_VERSION=5:18.09.8~3-0~debian-stretch
 cat << EOF
 ##command##
 ## sudo apt-get update -y
+## 
 EOF
 
 #sudo apt-get update
@@ -33,6 +34,7 @@ cat << EOF
         curl \
         gnupg2 \
         software-properties-common
+## 
 EOF
 
 #sudo apt-get install \
@@ -47,6 +49,7 @@ sudo apt-get install -y \
 cat << EOF
 ##command##
 ## curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+## 
 EOF
 
 curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
@@ -75,6 +78,7 @@ sudo add-apt-repository \
 cat << EOF
 ##command##
 ## sudo apt-get update -y
+## 
 EOF
 
 #sudo apt-get update
@@ -102,6 +106,7 @@ cat << EOF
 ##command##
 ## 
 ## sudo apt-get install -y docker-ce=$DOCKER_VERSION docker-ce-cli=$DOCKER_VERSION containerd.io
+## 
 EOF
 
 sudo apt-get install -y docker-ce=$DOCKER_VERSION docker-ce-cli=$DOCKER_VERSION containerd.io
@@ -129,6 +134,7 @@ cat << EOF
 ## sudo apt-get update -y
 ## sudo apt-get install -y kubelet kubeadm kubectl
 ## sudo apt-mark hold kubelet kubeadm kubectl
+## 
 EOF
 
 #apt-get update && apt-get install -y apt-transport-https curl
@@ -200,6 +206,7 @@ cat << EOF
 ## mkdir -p $HOME/.kube
 ## sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 ## sudo chown $(id -u):$(id -g) $HOME/.kube/config
+## 
 EOF
 
 sudo kubeadm init --pod-network-cidr=10.244.0.0/16
