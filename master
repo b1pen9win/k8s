@@ -223,7 +223,7 @@ The master node keep this state for 100 seconds.
 
   $ docker run --rm -d --name token-nginx
                --publish 9999:80
-	       --mount type=bind,source=$PWD,target=/usr/share/nginx/html/
+	       --mount type=bind,source=\$PWD,target=/usr/share/nginx/html/
 	       nginx
 
 Then run the following command...
@@ -235,7 +235,7 @@ EOF
 sudo kubeadm token create --print-join-command > index.html
 sudo docker run --rm -d --name token-nginx \
                 --publish 9999:80 \
-                --mount type=bind,source=\$PWD,target=/usr/share/nginx/html/ \
+                --mount type=bind,source=$PWD,target=/usr/share/nginx/html/ \
                 nginx
 
 for ((i = 1; i <= 10; i++))
