@@ -1,0 +1,210 @@
+#!/bin/bash
+
+####################################################################################################
+# F5 Container Ingress Services setup
+# reference url:
+# https://clouddocs.f5.com/containers/v2/kubernetes/kctlr-use-bigip-k8s.html#use-bigip-k8s-flannel
+####################################################################################################
+
+# Configuration Parameter
+vlan_name=vlan10
+vlan_interface=1.1
+vlan_tag=10
+vlan_gateway=10.10.11.1
+self_vlan=10.10.11.201/24
+self_vlan_float=10.10.11.200/24
+self_vxlan=10.244.9.254/16
+self_vxlan_float=10.244.9.250/16
+
+##########################################################################################
+## Create Base Network Configuration
+##########################################################################################
+
+tmsh create net vlan ${vlan_name} { interfaces add { ${vlan_interface} } tag ${vlan_tag} }
+tmsh create net self ${self_vlan%/*} address ${self_vlan} allow-service default vlan ${vlan_name}
+tmsh create net route default gw ${vlan_gateway}
+
+##########################################################################################
+## Add BIG-IP device to flannel VXLAN
+##########################################################################################
+
+##################################################
+### Set up the BIG-IP system: 
+### Create a VXLAN tunnel
+##################################################
+
+# 1. Log in to the TMOS shell (tmsh).
+#tmsh
+
+# 2. Create a VXLAN profile with flooding-type none.
+
+#create net tunnels vxlan fl-vxlan port 8472 flooding-type none
+tmsh create net tunnels vxlan fl-vxlan port 8472 flooding-type none
+
+# 3. Create a VXLAN tunnel.
+
+#    Set the local-address to an IP address from the network that will support the VXLAN overlay.
+#    Set the key to 1 to grant the BIG-IP device access to all Cluster resources.
+
+#create net tunnels tunnel flannel_vxlan key 1 profile fl-vxlan local-address 172.16.1.28
+tmsh create net tunnels tunnel flannel_vxlan key 1 profile fl-vxlan local-address ${self_vlan%/*}
+
+##################################################
+### Set up the BIG-IP system: 
+### Create a self IP in the VXLAN
+##################################################
+
+# 1. Identify the flannel subnet you want to assign to the BIG-IP system. 
+#    Make sure it doesn’t overlap with a subnet that’s already in use by existing 
+#    Nodes in the Kubernetes Cluster. You will assign this subnet to a “dummy” Node for the BIG-IP device later.
+
+# 2. Log in to the TMOS shell (tmsh).
+#tmsh
+
+# 3. Copy to clipboard
+#    Create a self IP using an address from the subnet you want to assign to the BIG-IP device.
+
+# Important #
+# The self IP range must fall within the cluster subnet mask. 
+# The flannel network’s default subnet mask is /16.
+# If you use the BIG-IP configuration utility to create a self IP, 
+# you may need to provide the full netmask instead of the CIDR notation.
+
+#create net self 10.129.2.3 address 10.129.2.3/24 allow-service none vlan flannel_vxlan
+tmsh create net self ${self_vxlan%/*} address ${self_vxlan} allow-service none vlan flannel_vxlan
+
+##################################################
+### Set up the BIG-IP system: 
+### Create a floating self IP in the VXLAN
+##################################################
+
+# Create a floating IP address in the flannel subnet you assigned to the BIG-IP device.
+
+#create net self 10.129.2.4 address 10.129.2.4/24 allow-service none traffic-group traffic-group-1 vlan flannel_vxlan
+tmsh create net self ${self_vxlan_float%/*} address ${self_vxlan_float} allow-service none traffic-group traffic-group-1 vlan flannel_vxlan
+
+# Note #
+# By default, the BIG-IP Controller uses BIG-IP Automap SNAT for all of the virtual servers it creates. 
+# From k8s-bigip-ctlr v1.5.0 forward, you can designate a specific SNAT pool 
+# in the Controller Deployment instead of using SNAT automap.
+
+# In environments where the BIG-IP connects to the Cluster network, 
+# the self IP used as the BIG-IP VTEP serves as the SNAT pool for all origin addresses within the Cluster. 
+# The subnet mask you provide when you create the self IP defines the addresses available to the SNAT pool.
+
+##################################################
+### Set up the BIG-IP system: 
+### Verify creation of the BIG-IP objects
+##################################################
+
+# You can use a TMOS shell (tmsh) to verify object creation.
+
+#list net tunnels tunnel flannel_vxlan
+#list net self 10.129.2.3
+#list net self 10.129.2.4
+
+tmsh list net tunnels tunnel flannel_vxlan
+tmsh list net self ${self_vxlan%/*}
+tmsh list net self ${self_vxlan_float%/*}
+
+##################################################
+### Add the BIG-IP device to the flannel overlay network: 
+### Find the VTEP MAC address
+##################################################
+
+# Flannel uses a set of custom Annotations to identify Nodes as part of the Cluster network. 
+# When you create a dummy Node resource for the BIG-IP that contains these Annotations, 
+# flannel can discover the BIG-IP device and monitor it as part of the VXLAN.
+
+# You can find the MAC address of your BIG-IP VXLAN tunnel using a TMOS shell.
+
+# show net tunnels tunnel flannel_vxlan all-properties
+# -------------------------------------------------
+# Net::Tunnel: flannel_vxlan
+# -------------------------------------------------
+# MAC Address                   ab:12:cd:34:ef:56
+# ...
+
+show net tunnels tunnel flannel_vxlan all-properties
+
+##################################################
+### Add the BIG-IP device to the flannel overlay network: 
+### Find the flannel Annotations
+##################################################
+
+# Run kubectl describe for any Node in the Cluster and make note of the 
+# flannel Annotations included in the Node description.
+
+# kubectl describe nodes
+# ...
+# flannel.alpha.coreos.com/backend-data:'{"VtepMAC":"<mac-address>"}'
+# flannel.alpha.coreos.com/backend-type: 'vxlan'
+# flannel.alpha.coreos.com/kube-subnet-manager: 'true'
+# flannel.alpha.coreos.com/public-ip: <node-ip-address>
+# ...
+
+kubectl describe nodes
+
+##################################################
+### Add the BIG-IP device to the flannel overlay network: 
+### Create a Kubernetes Node for the BIG-IP device
+##################################################
+
+# 1. Create a “dummy” Kubernetes Node resource.
+# Include all of the flannel Annotations. 
+# Define the backend-data and public-ip Annotations with data from the BIG-IP VXLAN:
+
+# flannel.alpha.coreos.com/backend-data:'{"VtepMAC":"<BIG-IP_mac-address>"}'
+# flannel.alpha.coreos.com/public-ip: <BIG-IP_vtep-address>
+# (This is the IP address you assigned to the VXLAN tunnel).
+
+# Set the podCIDR to the subnet you used to create the self IP and floating IP.
+
+#####
+#apiVersion: v1
+#kind: Node
+#metadata:
+#  name: bigip
+#  annotations:
+#    # Provide the MAC address of the BIG-IP VXLAN tunnel
+#    flannel.alpha.coreos.com/backend-data: '{"VtepMAC":"ab:12:cd:34:ef:56"}'
+#    flannel.alpha.coreos.com/backend-type: "vxlan"
+#    flannel.alpha.coreos.com/kube-subnet-manager: "true"
+#    # Provide the IP address you assigned as the BIG-IP VTEP
+#    flannel.alpha.coreos.com/public-ip: 172.16.1.28
+#spec:
+#  # Define the flannel subnet you want to assign to the BIG-IP device.
+#  # Be sure this subnet does not collide with any other Nodes' subnets.
+#  podCIDR: 10.129.3.0/24
+#####
+
+# Important #
+# The BIG-IP dummy Node’s status will always be “NotReady” 
+# because it is not a fully-participating Kubernetes Node 
+# (in other words, it’s not a Node on which Kubernetes can schedule resources). 
+# This status does not affect the BIG-IP device’s ability to communicate in the overlay network.
+
+# 2. Upload the Node resource to the Kubernetes API server.
+
+kubectl create -f f5-kctlr-bigip-node.yaml
+
+
+# 3. Verify creation of the Node.
+
+kubectl get nodes
+
+# kubectl get nodes
+# NAME           STATUS    AGE       VERSION
+# bigip          NotReady  5m        v1.7.5
+# k8s-master-0   Ready     2d        v1.7.5
+# k8s-worker-0   Ready     2d        v1.7.5
+# k8s-worker-1   Ready     2d        v1.7.5
+
+
+##########################################################################################
+## Install the BIG-IP Controller: Kubernetes
+##########################################################################################
+
+
+
+
