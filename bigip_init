@@ -15,6 +15,7 @@ self_vlan=10.10.11.201/24
 self_vlan_float=10.10.11.200/24
 self_vxlan=10.244.9.254/16
 self_vxlan_float=10.244.9.250/16
+bigip_podCIDR=10.244.8.0/24
 
 ##########################################################################################
 ## Create Base Network Configuration
@@ -127,6 +128,10 @@ tmsh list net self ${self_vxlan_float%/*}
 
 show net tunnels tunnel flannel_vxlan all-properties
 
+buff=$(tmsh show net tunnels tunnel flannel_vxlan all-properties | grep MAC)
+VtepMAC=$(echo "${buff}" | grep -i -o '[0-9A-F]\{2\}\(:[0-9A-F]\{2\}\)\{5\}')
+echo VtepMAC=$VtepMAC
+
 ##################################################
 ### Add the BIG-IP device to the flannel overlay network: 
 ### Find the flannel Annotations
@@ -178,6 +183,24 @@ kubectl describe nodes
 #  podCIDR: 10.129.3.0/24
 #####
 
+cat << EOF > f5-kctlr-bigip-node.yaml
+apiVersion: v1
+kind: Node
+metadata:
+  name: bigip
+  annotations:
+    # Provide the MAC address of the BIG-IP VXLAN tunnel
+    flannel.alpha.coreos.com/backend-data: '{"VtepMAC":"${VtepMAC}"}'
+    flannel.alpha.coreos.com/backend-type: "vxlan"
+    flannel.alpha.coreos.com/kube-subnet-manager: "true"
+    # Provide the IP address you assigned as the BIG-IP VTEP
+    flannel.alpha.coreos.com/public-ip: ${self_vlan%/*}
+spec:
+  # Define the flannel subnet you want to assign to the BIG-IP device.
+  # Be sure this subnet does not collide with any other Nodes' subnets.
+  podCIDR: ${bigip_podCIDR}
+EOF
+
 # Important #
 # The BIG-IP dummy Node’s status will always be “NotReady” 
 # because it is not a fully-participating Kubernetes Node 
@@ -186,25 +209,43 @@ kubectl describe nodes
 
 # 2. Upload the Node resource to the Kubernetes API server.
 
-kubectl create -f f5-kctlr-bigip-node.yaml
 
+##### ///// on k8s master node
+
+kubectl create -f f5-kctlr-bigip-node.yaml
 
 # 3. Verify creation of the Node.
 
+#kubectl get nodes
+#NAME           STATUS    AGE       VERSION
+#bigip          NotReady  5m        v1.7.5
+#k8s-master-0   Ready     2d        v1.7.5
+#k8s-worker-0   Ready     2d        v1.7.5
+#k8s-worker-1   Ready     2d        v1.7.5
+
 kubectl get nodes
 
-# kubectl get nodes
-# NAME           STATUS    AGE       VERSION
-# bigip          NotReady  5m        v1.7.5
-# k8s-master-0   Ready     2d        v1.7.5
-# k8s-worker-0   Ready     2d        v1.7.5
-# k8s-worker-1   Ready     2d        v1.7.5
-
+##### on k8s master node /////
 
 ##########################################################################################
 ## Install the BIG-IP Controller: Kubernetes
 ##########################################################################################
 
+##########################################################################################
+## Initial Setup
+##########################################################################################
+
+
+# 1. If you want to use BIG-IP High Availability (HA), set up two or more F5 BIG-IPs in a Device Service Cluster (DSC).
+
+# 2. Create a new partition on your BIG-IP system.
+
+tmsh create auth partition cis-part1
+
+
+# 3. Store your BIG-IP login credentials in a Secret.
+
+# 4. If you need to pull the k8s-bigip-ctlr image from a private Docker registry, store your Docker login credentials as a Secret.
 
 
 
